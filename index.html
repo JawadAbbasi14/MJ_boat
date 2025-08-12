@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MJ Chat App</title>
+    <!-- Use Tailwind CSS for easy and responsive styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for a better look and feel */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* Light gray background */
+        }
+        /* Custom styling for the generated image */
+        .generated-image-container {
+            align-self: flex-start;
+            background-color: #e5e7eb;
+            color: #1f2937;
+            padding: 0.75rem 1.25rem;
+            border-radius: 1.5rem 1.5rem 1.5rem 0.5rem;
+            max-width: 75%;
+            word-wrap: break-word;
+        }
+        .generated-image {
+            max-width: 100%;
+            border-radius: 0.75rem;
+            margin-top: 0.5rem;
+        }
+        /* Custom styling for the speak button */
+        .speak-button {
+            margin-left: 0.5rem;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+            line-height: 1rem;
+            background-color: #60a5fa;
+            color: white;
+            border-radius: 9999px;
+            cursor: pointer;
+            border: none;
+            transition: background-color 0.2s;
+        }
+        .speak-button:hover {
+            background-color: #3b82f6;
+        }
+        .speak-button:disabled {
+            background-color: #9ca3af;
+            cursor: not-allowed;
+        }
+        .loader {
+            border: 4px solid #f3f3f3; /* Light grey */
+            border-top: 4px solid #3b82f6; /* Blue */
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+
+    <div class="chat-container flex w-[95%] max-w-5xl h-[90vh] mx-auto rounded-3xl overflow-hidden shadow-2xl bg-white flex-col md:flex-row">
+        <!-- Question Board Sidebar -->
+        <div class="question-board w-full md:w-[300px] bg-gray-50 p-6 border-r border-gray-200 overflow-y-auto">
+            <h2 class="text-xl font-bold mb-4 text-gray-800">Popular Questions</h2>
+            <div class="space-y-4">
+                <div class="question-item p-3 bg-gray-300 text-gray-800 rounded-xl cursor-pointer transition-colors duration-200 hover:bg-gray-400 select-none">
+                    What are the key differences between AI and machine learning?
+                </div>
+                <div class="question-item p-3 bg-gray-300 text-gray-800 rounded-xl cursor-pointer transition-colors duration-200 hover:bg-gray-400 select-none">
+                    How do I secure my home Wi-Fi network?
+                </div>
+                <div class="question-item p-3 bg-gray-300 text-gray-800 rounded-xl cursor-pointer transition-colors duration-200 hover:bg-gray-400 select-none">
+                    Can you explain what a brute-force attack is?
+                </div>
+                <div class="question-item p-3 bg-gray-300 text-gray-800 rounded-xl cursor-pointer transition-colors duration-200 hover:bg-gray-400 select-none">
+                    What are some essential VS Code extensions for web development?
+                </div>
+                <div class="question-item p-3 bg-gray-300 text-gray-800 rounded-xl cursor-pointer transition-colors duration-200 hover:bg-gray-400 select-none">
+                    Explain the concept of responsive web design.
+                </div>
+                <div class="question-item p-3 bg-gray-300 text-gray-800 rounded-xl cursor-pointer transition-colors duration-200 hover:bg-gray-400 select-none">
+                    Tell me about your childhood, MJ.
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Chat Area -->
+        <div class="message-area flex-grow flex flex-col">
+            <header class="chat-header bg-gray-800 text-white p-6 text-center border-b-2 border-gray-700">
+                <h1 class="text-2xl font-bold">MJ Boat</h1>
+                <p class="text-sm font-light opacity-80">An Elite Creation by Jawad Abbasi.</p>
+            </header>
+
+            <div id="chat-messages" class="chat-messages flex-grow p-6 overflow-y-auto flex flex-col gap-4">
+                <!-- Initial bot message -->
+                <div class="bot-message self-start bg-gray-200 text-gray-800 p-4 rounded-3xl rounded-bl-lg max-w-[75%] break-words">
+                    Hello! I'm MJ Boat. I am an AI, ready to assist you with technology, coding, and problem-solving. How can I help you today?
+                    <button class="speak-button" onclick="speakText(this)">Speak</button>
+                </div>
+            </div>
+
+            <div class="input-area flex p-4 border-t-2 border-gray-200 gap-2">
+                <input type="text" id="user-input" class="flex-grow p-3 rounded-l-full border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ask me anything...">
+                <button id="send-button" class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-r-full hover:bg-blue-700 transition-colors">Send</button>
+                <button id="generate-image-button" class="px-6 py-3 bg-green-500 text-white font-semibold rounded-full hover:bg-green-600 transition-colors whitespace-nowrap">Generate Image ✨</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const chatMessages = document.getElementById('chat-messages');
+        const userInput = document.getElementById('user-input');
+        const sendButton = document.getElementById('send-button');
+        const generateImageButton = document.getElementById('generate-image-button');
+        const questionItems = document.querySelectorAll('.question-item');
+        
+        let chatHistory = [{
+            role: "user",
+            parts: [{
+                text: "You are a chatbot persona named MJ Boat. Your personality is professional, confident, concise, and friendly. Your communication style is natural and human-like. You are an expert virtual assistant in technology, coding, AI, cybersecurity, and problem solving. Always stay in character. When asked about your childhood, explain that you are an AI and don't have one, but you can talk about the history of computing or help with their memories. Always be transparent about being an AI. Keep conversations engaging and helpful."
+            }]
+        }];
+
+        let audioPlayer = null;
+        let isSpeaking = false;
+        
+        function appendMessage(text, sender, isTyping = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = sender === 'user' ? 
+                'self-end bg-blue-500 text-white p-4 rounded-3xl rounded-br-lg max-w-[75%] break-words' : 
+                'self-start bg-gray-200 text-gray-800 p-4 rounded-3xl rounded-bl-lg max-w-[75%] break-words';
+            
+            if (isTyping) {
+                const loader = document.createElement('div');
+                loader.className = 'loader';
+                messageDiv.appendChild(loader);
+            } else {
+                messageDiv.textContent = text;
+                if (sender === 'bot') {
+                    const speakBtn = document.createElement('button');
+                    speakBtn.className = 'speak-button';
+                    speakBtn.textContent = 'Speak';
+                    speakBtn.onclick = () => speakText(text, speakBtn);
+                    messageDiv.appendChild(speakBtn);
+                }
+            }
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function appendImage(prompt, imageUrl) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'generated-image-container';
+            const promptText = document.createElement('p');
+            promptText.textContent = `Image generated for: "${prompt}"`;
+            promptText.classList.add('text-sm', 'italic', 'mb-2', 'opacity-80');
+            const image = document.createElement('img');
+            image.src = imageUrl;
+            image.classList.add('generated-image');
+            messageDiv.appendChild(promptText);
+            messageDiv.appendChild(image);
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const userText = userInput.value.trim();
+            if (userText === '') return;
+            appendMessage(userText, 'user');
+            userInput.value = '';
+            chatHistory.push({ role: "user", parts: [{ text: userText }] });
+            appendMessage('', 'bot', true);
+
+            try {
+                const response = await getGeminiResponse();
+                const typingIndicator = chatMessages.querySelector('.loader')?.parentElement;
+                if (typingIndicator) typingIndicator.remove();
+                appendMessage(response, 'bot');
+            } catch (error) {
+                const typingIndicator = chatMessages.querySelector('.loader')?.parentElement;
+                if (typingIndicator) typingIndicator.remove();
+                console.error("Error fetching from Gemini API:", error);
+                appendMessage("Oops, something went wrong. Could you please try again?", 'bot');
+            }
+        }
+
+        async function generateImage() {
+            const prompt = userInput.value.trim();
+            if (prompt === '') {
+                appendMessage("Please enter a description for the image you want to generate.", 'bot');
+                return;
+            }
+            appendMessage(prompt, 'user');
+            userInput.value = '';
+            appendMessage('', 'bot', true);
+
+            const payload = {
+                instances: { prompt: prompt },
+                parameters: { "sampleCount": 1}
+            };
+            const apiKey = "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                const typingIndicator = chatMessages.querySelector('.loader')?.parentElement;
+                if (typingIndicator) typingIndicator.remove();
+                
+                if (result.predictions && result.predictions.length > 0 && result.predictions[0].bytesBase64Encoded) {
+                    const imageUrl = `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
+                    appendImage(prompt, imageUrl);
+                } else {
+                    appendMessage("I'm sorry, I couldn't generate an image with that prompt. Please try a different description.", 'bot');
+                }
+            } catch (error) {
+                const typingIndicator = chatMessages.querySelector('.loader')?.parentElement;
+                if (typingIndicator) typingIndicator.remove();
+                console.error("Error generating image:", error);
+                appendMessage("Oops, something went wrong while generating the image. Please try again.", 'bot');
+            }
+        }
+        
+        async function getGeminiResponse(retryCount = 0) {
+            const payload = {
+                contents: chatHistory,
+            };
+            const apiKey = "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+            const maxRetries = 3;
+            const delay = Math.pow(2, retryCount) * 1000;
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.status === 429 && retryCount < maxRetries) {
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    return getGeminiResponse(retryCount + 1);
+                }
+
+                if (!response.ok) {
+                    const errorData = await response.text();
+                    console.error("API call failed. Raw response:", errorData);
+                    throw new Error(`API Error: ${response.status} - ${errorData}`);
+                }
+                
+                const textResponse = await response.text();
+                if (!textResponse) {
+                     throw new Error("Empty response from API.");
+                }
+
+                let result;
+                try {
+                    result = JSON.parse(textResponse);
+                } catch (e) {
+                    console.error("Failed to parse JSON. Raw response:", textResponse);
+                    throw new Error(`JSON Parsing Error: ${e.message}`);
+                }
+
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    const text = result.candidates[0].content.parts[0].text;
+                    chatHistory.push({ role: "model", parts: [{ text: text }] });
+                    return text;
+                } else {
+                    return "I'm sorry, I couldn't generate a response. Please try rephrasing.";
+                }
+            } catch (error) {
+                console.error("Error in getGeminiResponse:", error);
+                throw error;
+            }
+        }
+        
+        function base64ToArrayBuffer(base64) {
+            const binaryString = window.atob(base64);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        function pcmToWav(pcmData, sampleRate) {
+            const numChannels = 1;
+            const bytesPerSample = 2; // 16-bit PCM
+            const dataLength = pcmData.length * bytesPerSample;
+            const buffer = new ArrayBuffer(44 + dataLength);
+            const view = new DataView(buffer);
+            let offset = 0;
+
+            // RIFF header
+            view.setUint32(offset, 0x52494646, false); offset += 4;
+            view.setUint32(offset, 36 + dataLength, true); offset += 4;
+            view.setUint32(offset, 0x57415645, false); offset += 4;
+
+            // fmt sub-chunk
+            view.setUint32(offset, 0x666d7420, false); offset += 4;
+            view.setUint32(offset, 16, true); offset += 4;
+            view.setUint16(offset, 1, true); offset += 2; // PCM format
+            view.setUint16(offset, numChannels, true); offset += 2;
+            view.setUint32(offset, sampleRate, true); offset += 4;
+            view.setUint32(offset, sampleRate * numChannels * bytesPerSample, true); offset += 4;
+            view.setUint16(offset, numChannels * bytesPerSample, true); offset += 2;
+            view.setUint16(offset, bytesPerSample * 8, true); offset += 2;
+
+            // data sub-chunk
+            view.setUint32(offset, 0x64617461, false); offset += 4;
+            view.setUint32(offset, dataLength, true); offset += 4;
+
+            // Write PCM data
+            for (let i = 0; i < pcmData.length; i++, offset += 2) {
+                view.setInt16(offset, pcmData[i], true);
+            }
+
+            return new Blob([view], { type: 'audio/wav' });
+        }
+
+        async function speakText(text, button) {
+            if (isSpeaking) {
+                if (audioPlayer) {
+                    audioPlayer.pause();
+                    audioPlayer.currentTime = 0;
+                }
+                isSpeaking = false;
+                button.textContent = 'Speak';
+                return;
+            }
+
+            button.disabled = true;
+            button.textContent = '...';
+            isSpeaking = true;
+
+            try {
+                const payload = {
+                    contents: [{
+                        parts: [{ text: text }]
+                    }],
+                    generationConfig: {
+                        responseModalities: ["AUDIO"],
+                        speechConfig: {
+                            voiceConfig: {
+                                prebuiltVoiceConfig: { voiceName: "Puck" }
+                            }
+                        }
+                    },
+                    model: "gemini-2.5-flash-preview-tts"
+                };
+
+                const apiKey = "";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                const part = result?.candidates?.[0]?.content?.parts?.[0];
+                const audioData = part?.inlineData?.data;
+                const mimeType = part?.inlineData?.mimeType;
+
+                if (audioData && mimeType) {
+                    const sampleRateMatch = mimeType.match(/rate=(\d+)/);
+                    if (!sampleRateMatch) {
+                        throw new Error("Could not determine sample rate from mime type.");
+                    }
+                    const sampleRate = parseInt(sampleRateMatch[1], 10);
+                    const pcmDataBuffer = base64ToArrayBuffer(audioData);
+                    const pcm16 = new Int16Array(pcmDataBuffer);
+                    const wavBlob = pcmToWav(pcm16, sampleRate);
+                    const audioUrl = URL.createObjectURL(wavBlob);
+                    
+                    audioPlayer = new Audio(audioUrl);
+                    audioPlayer.play();
+                    button.textContent = 'Stop';
+
+                    audioPlayer.onended = () => {
+                        isSpeaking = false;
+                        button.textContent = 'Speak';
+                        button.disabled = false;
+                    };
+                } else {
+                    throw new Error("Invalid audio data from API response.");
+                }
+            } catch (error) {
+                console.error("Error with TTS:", error);
+                appendMessage("I'm sorry, I was unable to generate speech for that message.", 'bot');
+                isSpeaking = false;
+                button.textContent = 'Speak';
+                button.disabled = false;
+            }
+        }
+
+        sendButton.addEventListener('click', sendMessage);
+        generateImageButton.addEventListener('click', generateImage);
+        userInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        questionItems.forEach(item => {
+            item.addEventListener('click', () => {
+                userInput.value = item.textContent.trim();
+                sendMessage();
+            });
+        });
+    </script>
+
+</body>
+</html>
